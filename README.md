@@ -56,19 +56,45 @@ memengaruhi level.
 Dua puluh enam tema, ditambah varian `mate-in-N` yang dihasilkan otomatis. Semuanya
 ditulis dari nol tanpa pustaka tambahan.
 
-Serangan ganda dan pembongkaran pertahanan:
-`fork` `double-attack` `discovered-attack` `deflection` `attraction` `remove-defender`
+**Serangan ke dua sasaran sekaligus, dan pembongkaran pertahanan**
 
-Membatasi gerak lawan:
-`pin` `skewer` `x-ray` `trapped-piece`
+| Tema | Artinya |
+|---|---|
+| `fork` | Satu bidak menyerang dua sasaran sekaligus, sering disebut garpu |
+| `double-attack` | Dua ancaman muncul bersamaan dari satu langkah |
+| `discovered-attack` | Bidak menyingkir, membuka serangan bidak lain di belakangnya |
+| `deflection` | Memaksa bidak lawan meninggalkan tugas jaganya |
+| `attraction` | Memancing bidak lawan ke petak yang merugikan |
+| `remove-defender` | Menyingkirkan bidak yang menjaga sasaran |
 
-Pola mat bernama:
-`smothered-mate` `anastasia-mate` `arabian-mate` `boden-mate` `dovetail-mate`
-`hook-mate` `back-rank-mate`
+**Membatasi gerak lawan**
 
-Penanda kualitas dan konteks:
-`quiet` `sacrifice` `capture` `check` `promotion` `advanced-pawn` `endgame` `mate`
-`mate-in-1`
+| Tema | Artinya |
+|---|---|
+| `pin` | Bidak tidak bisa bergerak karena melindungi bidak yang lebih berharga |
+| `skewer` | Kebalikan pin: bidak berharga dipaksa minggir, yang di belakangnya jatuh |
+| `x-ray` | Serangan yang menembus lewat bidak di antaranya |
+| `trapped-piece` | Bidak terkurung tanpa petak aman |
+
+**Pola skakmat yang punya nama sendiri**
+
+Beberapa susunan skakmat muncul begitu sering sampai diberi nama tersendiri di dunia
+catur. Program ini mengenali tujuh di antaranya:
+
+| Tema | Bentuknya |
+|---|---|
+| `smothered-mate` | Raja dimat kuda, terkurung bidaknya sendiri |
+| `anastasia-mate` | Kuda dan benteng menjepit raja di tepi papan |
+| `arabian-mate` | Kuda dan benteng bekerja sama di sudut |
+| `boden-mate` | Dua gajah menyilang mengunci raja |
+| `dovetail-mate` | Menteri mematikan raja yang jalan keluarnya tertutup bidak sendiri |
+| `hook-mate` | Benteng, kuda, dan bidak mengunci bersama |
+| `back-rank-mate` | Raja terjebak di baris belakang oleh bidaknya sendiri |
+
+**Penanda kualitas dan konteks**
+
+`quiet` (langkah tenang, bukan skak atau makan) · `sacrifice` (pengorbanan materi) ·
+`capture` · `check` · `promotion` · `advanced-pawn` · `endgame` · `mate` · `mate-in-1`
 
 ## Memakainya
 
