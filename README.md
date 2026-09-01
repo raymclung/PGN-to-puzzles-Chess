@@ -76,20 +76,16 @@ ditulis dari nol tanpa pustaka tambahan.
 | `x-ray` | Serangan yang menembus lewat bidak di antaranya |
 | `trapped-piece` | Bidak terkurung tanpa petak aman |
 
-**Pola skakmat yang punya nama sendiri**
+**Pola skakmat**
 
-Beberapa susunan skakmat muncul begitu sering sampai diberi nama tersendiri di dunia
-catur. Program ini mengenali tujuh di antaranya:
+Tujuh susunan skakmat yang cukup khas untuk dikenali secara terpisah:
 
-| Tema | Bentuknya |
-|---|---|
-| `smothered-mate` | Raja dimat kuda, terkurung bidaknya sendiri |
-| `anastasia-mate` | Kuda dan benteng menjepit raja di tepi papan |
-| `arabian-mate` | Kuda dan benteng bekerja sama di sudut |
-| `boden-mate` | Dua gajah menyilang mengunci raja |
-| `dovetail-mate` | Menteri mematikan raja yang jalan keluarnya tertutup bidak sendiri |
-| `hook-mate` | Benteng, kuda, dan bidak mengunci bersama |
-| `back-rank-mate` | Raja terjebak di baris belakang oleh bidaknya sendiri |
+`smothered-mate` `anastasia-mate` `arabian-mate` `boden-mate` `dovetail-mate`
+`hook-mate` `back-rank-mate`
+
+Nama-nama itu istilah baku di literatur catur. Yang paling sering muncul dalam
+praktik adalah `back-rank-mate`, ketika raja terjebak di baris belakang oleh
+barisan bidaknya sendiri.
 
 **Penanda kualitas dan konteks**
 
