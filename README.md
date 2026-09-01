@@ -136,6 +136,22 @@ Ada juga `embed.js` — widget papan mandiri yang bisa ditempel ke halaman mana 
 <div data-chess-game data-pgn="1. e4 e5 2. Nf3 Nc6 ..." data-orientation="white"></div>
 ```
 
+## Test
+
+```bash
+python -m unittest discover -v
+```
+
+Sembilan belas test menutup bagian yang menentukan bentuk sebuah puzzle:
+penjenjangan kesulitan, deteksi tema, dan penyaring yang membuang kandidat
+buruk. Semuanya berjalan tanpa Stockfish — kode yang berbicara ke mesin butuh
+biner sungguhan dan makan waktu beberapa detik per posisi, jadi sengaja tidak
+diikutkan.
+
+Beberapa test menuliskan alasan desainnya secara eksplisit, misalnya bahwa
+rangkaian panjang berisi langkah gamblang tidak boleh mengalahkan satu langkah
+tenang, dan bahwa tag `mate-in-N` mengikuti putusan mesin, bukan keadaan papan.
+
 ## Keluarannya
 
 ```json
