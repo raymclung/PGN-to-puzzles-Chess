@@ -53,14 +53,22 @@ memengaruhi level.
 
 ## Tema yang dikenali
 
-Dua puluh satu, semuanya ditulis dari nol tanpa pustaka tambahan:
+Dua puluh enam tema, ditambah varian `mate-in-N` yang dihasilkan otomatis. Semuanya
+ditulis dari nol tanpa pustaka tambahan.
 
-`fork` `double-attack` `discovered-attack` `pin` `skewer` `x-ray` `trapped-piece`
-`remove-defender` `deflection` `quiet` `sacrifice` `capture` `check` `promotion`
+Serangan ganda dan pembongkaran pertahanan:
+`fork` `double-attack` `discovered-attack` `deflection` `attraction` `remove-defender`
+
+Membatasi gerak lawan:
+`pin` `skewer` `x-ray` `trapped-piece`
+
+Pola mat bernama:
+`smothered-mate` `anastasia-mate` `arabian-mate` `boden-mate` `dovetail-mate`
+`hook-mate` `back-rank-mate`
+
+Penanda kualitas dan konteks:
+`quiet` `sacrifice` `capture` `check` `promotion` `advanced-pawn` `endgame` `mate`
 `mate-in-1`
-
-Ditambah enam pola mat bernama: `smothered-mate` `anastasia-mate` `arabian-mate`
-`boden-mate` `dovetail-mate` `hook-mate`
 
 ## Memakainya
 
