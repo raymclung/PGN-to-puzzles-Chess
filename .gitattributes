@@ -1,0 +1,8 @@
+# Proyek ini pada dasarnya alat Python; berkas web di bawah ini adalah
+# antarmuka pendukung, bukan bahasa utamanya. Tanpa penanda ini GitHub
+# menghitung berdasarkan jumlah byte dan melabeli repo sebagai HTML.
+index.html          linguist-detectable=false
+embed.js            linguist-detectable=false
+mobile.css          linguist-detectable=false
+img/*               linguist-vendored
+docs/*              linguist-documentation
