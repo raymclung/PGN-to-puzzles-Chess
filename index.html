@@ -1,0 +1,1724 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<title>Chess Analyzer + Puzzle Library</title>
+<link rel="stylesheet"
+      href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+<link rel="stylesheet" href="mobile.css">
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, sans-serif; margin: 0; color: #222; background: #fafafa; }
+  header.appbar { background: #2d3142; color: #fff; padding: 12px 24px;
+                  display: flex; align-items: center; gap: 24px; }
+  header.appbar h1 { font-size: 17px; margin: 0; font-weight: 600; }
+  .tabs { display: flex; gap: 4px; }
+  .tabs button { background: transparent; color: #c0c4d0; border: none;
+                 padding: 8px 16px; cursor: pointer; font-size: 14px; border-radius: 4px; }
+  .tabs button.active { background: rgba(255,255,255,0.18); color: #fff; }
+  main { padding: 20px; max-width: 1200px; margin: 0 auto; }
+  .hidden { display: none !important; }
+
+  .grid2 { display: grid; grid-template-columns: 480px 1fr; gap: 20px; }
+  #board, #puzzleBoard { width: 460px; }
+
+  .card { background: #fff; border: 1px solid #e2e2e2; border-radius: 6px;
+          padding: 14px 16px; }
+  .card + .card { margin-top: 12px; }
+  .card h3 { margin: 0 0 8px 0; font-size: 14px; color: #333; }
+
+  textarea { width: 100%; font-family: ui-monospace, Menlo, monospace;
+             font-size: 12px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
+  input[type=number] { width: 60px; padding: 3px 6px; }
+  button.primary { background: #2d3142; color: #fff; border: none;
+                   padding: 7px 14px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+  button.primary:hover { background: #1d2030; }
+  button.primary:disabled { background: #888; cursor: wait; }
+  button.secondary { background: #fff; border: 1px solid #ccc;
+                     padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+  button.secondary:hover { background: #f0f0f0; }
+  .danger { color: #cb2431 !important; border-color: #cb2431 !important; }
+
+  .move-list { font-family: ui-monospace, Menlo, monospace; font-size: 13px;
+               max-height: 280px; overflow-y: auto; line-height: 1.8; }
+  .move-list .move { display: inline-block; padding: 1px 5px; border-radius: 3px;
+                     cursor: pointer; }
+  .move-list .move:hover { background: #eef; }
+  .move-list .move.current { background: #2d3142; color: #fff; }
+  .move-list .move-num { color: #888; padding: 0 4px; }
+  .eval-bar { display: inline-block; padding: 1px 5px; font-size: 10px;
+              color: #fff; background: #999; border-radius: 3px;
+              vertical-align: middle; }
+  .eval-bar.pos { background: #22863a; }
+  .eval-bar.neg { background: #cb2431; }
+  .eval-bar.bigpos { background: #0d4d1e; }
+  .eval-bar.bigneg { background: #6a0c14; }
+
+  .pill { display: inline-block; background: #eef0f4; padding: 2px 8px;
+          border-radius: 10px; font-size: 11px; margin-right: 4px; color: #444; }
+  .meta { font-size: 13px; color: #555; line-height: 1.6; }
+  .meta b { color: #333; min-width: 80px; display: inline-block; }
+  .small { font-size: 12px; color: #666; }
+
+  hr { border: none; border-top: 1px solid #eee; margin: 12px 0; }
+  .controls-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  /* Wikipedia-style brown board to match standard chess sites */
+  /* Chess.com green/cream board theme */
+  .white-1e1d7 { background-color: #eeeed2 !important; color: #769656 !important; }
+  .black-3c85d { background-color: #769656 !important; color: #eeeed2 !important; }
+  .notation-322f9  { font-weight: 600; font-size: 11px; }
+  .board-b72b1 { border: 2px solid #404040; border-radius: 2px; }
+
+  /* Board + eval bar layout */
+  .board-wrap { display: flex; gap: 6px; align-items: flex-start; }
+  .eval-bar-vert {
+    width: 22px; height: 460px;
+    background: #1f1f1f;
+    border: 1px solid #404040;
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+    flex: 0 0 auto;
+  }
+  .eval-fill {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 50%;
+    background: linear-gradient(180deg, #fff 0%, #e8e8e8 100%);
+    transition: height 0.35s ease;
+  }
+  .eval-num {
+    position: absolute; left: 0; right: 0;
+    top: 4px; text-align: center;
+    font-size: 10px; font-weight: 700;
+    color: #1f1f1f; z-index: 2;
+    text-shadow: 0 0 2px rgba(255,255,255,0.6);
+    pointer-events: none;
+  }
+  /* Show num at bottom too when black is winning, for readability */
+  .eval-bar-vert.black-winning .eval-num {
+    color: #fff; text-shadow: 0 0 2px rgba(0,0,0,0.6);
+  }
+
+  /* Drop highlights */
+  .square-flash-good { box-shadow: inset 0 0 0 4px #22863a !important; }
+  .square-flash-bad  { box-shadow: inset 0 0 0 4px #cb2431 !important; }
+  .square-last       { box-shadow: inset 0 0 0 3px #ffd166 !important; }
+
+
+  /* Engine analysis lines */
+  .engine-lines { max-height: 240px; overflow-y: auto; margin-top: 8px; }
+  .engine-line {
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 13px; padding: 5px 6px;
+    border-bottom: 1px solid #f3f3f3; line-height: 1.7;
+    word-spacing: 1px;
+  }
+  .engine-line:last-child { border-bottom: 0; }
+  .engine-line .line-num { color: #888; margin-right: 6px; font-weight: 600;
+                           min-width: 18px; display: inline-block; }
+  .engine-line .line-eval { display: inline-block; padding: 1px 6px;
+                            font-size: 11px; color: #fff; background: #888;
+                            border-radius: 3px; min-width: 36px; text-align: center;
+                            margin-right: 6px; }
+  .engine-line .line-eval.pos { background: #22863a; }
+  .engine-line .line-eval.neg { background: #cb2431; }
+  .line-move { display: inline-block; padding: 1px 4px; border-radius: 3px;
+               cursor: pointer; margin: 0 1px; }
+  .line-move:hover { background: #e8eef8; color: #06c; }
+
+  /* Modal overlay (puzzle solved popup) — lichess-style */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+  }
+  .modal-overlay[hidden] { display: none !important; }
+  .modal-card {
+    background: #fff; border-radius: 8px; padding: 0;
+    width: 460px; max-width: 92vw; overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+    text-align: center;
+  }
+  .modal-card h2 { margin: 0; padding: 28px 24px 8px; font-size: 28px; color: #22863a; }
+  .modal-card.cheated h2 { color: #cb2431; }
+  .modal-card p { margin: 0; padding: 0 24px 20px; color: #555; font-size: 14px; }
+  .modal-card .modal-cta {
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px;
+    background: #2477e6; color: #fff;
+    padding: 22px 24px; cursor: pointer;
+    font-size: 18px; font-weight: 700; letter-spacing: 0.5px;
+    border: none; width: 100%;
+    transition: background 0.15s;
+  }
+  .modal-card.cheated .modal-cta { background: #d49a08; }
+  .modal-card .modal-cta:hover { background: #1a5dba; }
+  .modal-card.cheated .modal-cta:hover { background: #b88106; }
+  .modal-card .modal-cta:disabled { background: #888; cursor: not-allowed; }
+  .modal-card .modal-cta::before { content: '▶'; font-size: 22px; }
+  .modal-card .modal-actions { display: flex; gap: 0; border-top: 1px solid #eee; }
+  .modal-card .modal-actions button {
+    flex: 1; font-size: 13px; padding: 12px;
+    background: #fff; color: #555; border: none; border-right: 1px solid #eee;
+    cursor: pointer;
+  }
+  .modal-card .modal-actions button:last-child { border-right: 0; }
+  .modal-card .modal-actions button:hover { background: #f6f6f8; }
+
+  /* Hint highlight on puzzle board */
+  .puzzle-hint-glow {
+    box-shadow: inset 0 0 0 5px rgba(255, 200, 0, 0.85),
+                0 0 16px rgba(255, 200, 0, 0.6) !important;
+  }
+
+  /* Eval bar concealed while solving — keeps space, hides info */
+  .eval-bar-vert.eval-concealed .eval-fill {
+    height: 50% !important;
+    background: repeating-linear-gradient(
+      45deg, #555 0 6px, #444 6px 12px) !important;
+    opacity: 0.6;
+  }
+  .eval-bar-vert.eval-concealed .eval-num {
+    color: #fff !important; text-shadow: 0 0 3px #000;
+  }
+
+  /* Session attempt pills (rating delta history, lichess-style) */
+  .session-pills {
+    display: flex; gap: 5px; flex-wrap: wrap;
+    padding: 8px 4px; min-height: 30px;
+    align-items: center;
+  }
+  .session-pill {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 36px; padding: 3px 9px;
+    border-radius: 12px;
+    font-size: 12px; font-weight: 700;
+    color: #fff; cursor: pointer;
+    user-select: none;
+    transition: transform 0.1s, box-shadow 0.15s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  }
+  .session-pill:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+  .session-pill.pill-good    { background: #22863a; }   /* big positive */
+  .session-pill.pill-ok      { background: #5cb85c; }   /* small positive */
+  .session-pill.pill-minimal { background: #d49a08; }   /* +1 cheated */
+  .session-pill.pill-bad     { background: #cb2431; }   /* negative */
+  .session-pill.pill-current {
+    background: #2477e6; cursor: default;
+    width: 28px; min-width: 28px; padding: 0; height: 22px;
+  }
+  .session-pill.pill-current:hover { transform: none; }
+
+  /* ============ User area in header ============ */
+  header.appbar { justify-content: space-between; }
+  .user-area { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+  .user-area button {
+    background: rgba(255,255,255,0.10); color: #fff; border: 1px solid rgba(255,255,255,0.25);
+    padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;
+  }
+  .user-area button:hover { background: rgba(255,255,255,0.20); }
+  .user-area .signup-btn { background: #4caf50; border-color: #43a047; }
+  .user-area .signup-btn:hover { background: #43a047; }
+  .user-rating-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; background: rgba(255,255,255,0.10);
+    border-radius: 12px; font-size: 13px;
+  }
+  .user-rating-badge .rating-num { font-weight: 700; color: #ffd166; }
+  .user-rating-badge .username { color: #c0c4d0; }
+
+  /* ============ Auth modal ============ */
+  .auth-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+  }
+  .auth-modal {
+    background: #fff; border-radius: 8px;
+    width: 100%; max-width: 360px;
+    padding: 24px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.30);
+  }
+  .auth-modal h2 { margin: 0 0 16px 0; font-size: 18px; }
+  .auth-modal label {
+    display: block; margin-bottom: 12px; font-size: 13px; color: #333;
+  }
+  .auth-modal label span { display: block; margin-bottom: 4px; font-weight: 600; }
+  .auth-modal input {
+    width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px;
+    font-size: 14px; box-sizing: border-box;
+  }
+  .auth-modal input:focus { outline: 2px solid #2d3142; outline-offset: -1px; }
+  .auth-modal .auth-error {
+    color: #cb2431; font-size: 13px; min-height: 18px; margin: 4px 0 8px 0;
+  }
+  .auth-modal .auth-actions {
+    display: flex; gap: 8px; justify-content: space-between; align-items: center;
+    margin-top: 16px;
+  }
+  .auth-modal .auth-actions .switch-link {
+    background: none; border: none; color: #2d3142; cursor: pointer;
+    font-size: 13px; text-decoration: underline; padding: 0;
+  }
+  .auth-modal .submit-btn {
+    background: #2d3142; color: #fff; border: none; padding: 8px 18px;
+    border-radius: 4px; cursor: pointer; font-size: 14px;
+  }
+  .auth-modal .submit-btn:disabled { background: #888; cursor: wait; }
+  .auth-modal .close-x {
+    float: right; background: none; border: none; cursor: pointer;
+    font-size: 22px; line-height: 1; color: #888; padding: 0; margin: -10px -8px 0 0;
+  }
+  .auth-modal .close-x:hover { color: #333; }
+  .auth-modal .helper {
+    font-size: 12px; color: #888; margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+
+<header class="appbar">
+  <div style="display:flex; align-items:center; gap:24px">
+    <h1>♞ Chess Analyzer + Puzzle Library</h1>
+    <nav class="tabs">
+      <button data-tab="library" class="active">Puzzle Library</button>
+      <button data-tab="analyze">Analyze</button>
+    </nav>
+  </div>
+  <div class="user-area" id="userArea">
+    <!-- Populated by JS — shows Login/Sign Up when logged out, rating badge when logged in -->
+  </div>
+</header>
+
+<!-- ===== Auth modal (login or signup) ===== -->
+
+<main>
+
+<!-- ===== ANALYZE TAB ===== -->
+<section id="tab-analyze" class="hidden">
+  <div class="grid2">
+    <div>
+      <div class="board-wrap">
+        <div class="eval-bar-vert" title="Engine evaluation (white POV)">
+          <div class="eval-fill" id="evalFill"></div>
+          <div class="eval-num" id="evalNum">–</div>
+        </div>
+        <div id="board"></div>
+      </div>
+      <div class="card" style="margin-top: 8px">
+        <div class="controls-row">
+          <button id="firstBtn" class="secondary" title="Start (Home)">&#9198;</button>
+          <button id="prevBtn" class="secondary" title="Prev (←)">&larr;</button>
+          <button id="nextBtn" class="secondary" title="Next (→)">&rarr;</button>
+          <button id="lastBtn" class="secondary" title="End (End)">&#9197;</button>
+          <button id="flipBtn" class="secondary">Flip board</button>
+          <button id="resetPosBtn" class="secondary" title="Reset board to start position">Reset</button>
+          <label class="small" style="margin-left: 8px">
+            <input id="autoEval" type="checkbox" checked> Auto-eval
+          </label>
+          <span id="evalDisplay" style="margin-left: 12px; font-size: 13px; color: #444;"></span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card" id="enginePanel">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px">
+          <h3 style="margin: 0">Engine analysis</h3>
+          <div class="controls-row" style="gap: 4px">
+            <button id="multipvMinusBtn" class="secondary" title="Kurangi line">−</button>
+            <span id="multipvCount" class="small" style="min-width: 18px; text-align: center">3</span>
+            <button id="multipvPlusBtn" class="secondary" title="Tambah line">+</button>
+            <span class="small" style="margin-left: 8px">Depth
+              <input id="evalDepth" type="number" value="12" min="8" max="22">
+            </span>
+            <button id="reanalyzeBtn" class="secondary">Re-analyze</button>
+          </div>
+        </div>
+        <div id="engineLines" class="engine-lines small">
+          <i style="color:#888">Memuat engine&hellip;</i>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 12px">
+        <h3>Load PGN</h3>
+        <textarea id="pgnInput" rows="5" placeholder="Tempel PGN di sini, atau upload file..."></textarea>
+        <div class="controls-row" style="margin-top: 8px">
+          <input type="file" id="pgnFile" accept=".pgn,.txt" />
+          <button id="loadBtn" class="primary">Load PGN</button>
+          <span id="loadStatus" class="small"></span>
+        </div>
+      </div>
+
+      <div class="card" id="gameInfoCard" hidden style="margin-top: 12px">
+        <h3>Game</h3>
+        <select id="gameSelect" style="margin-bottom: 8px; width: 100%; padding: 4px"></select>
+        <div id="gameMeta" class="meta"></div>
+        <hr/>
+        <div class="move-list" id="moveList"></div>
+        <hr/>
+        <div class="controls-row">
+          <button id="analyzeBtn" class="primary">Analyze game</button>
+          <span class="small">Depth
+            <input id="analyzeDepth" type="number" value="12" min="8" max="22">
+          </span>
+          <button id="genFromGameBtn" class="secondary" title="Cek apakah game ini bisa dijadikan puzzle">Generate puzzles</button>
+          <span class="small">Swing
+            <input id="genSwing" type="number" value="200" min="50">
+          </span>
+          <span id="analyzeStatus" class="small"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== LIBRARY TAB ===== -->
+<section id="tab-library">
+  <div class="card">
+    <h3>Puzzle Library</h3>
+    <div id="libStats" class="meta">Memuat&hellip;</div>
+    <div class="controls-row" style="margin-top: 8px">
+      <button id="refreshLibBtn" class="secondary">Refresh</button>
+      <button id="clearLibBtn" class="secondary danger" data-admin-only hidden>
+        Clear all (admin)
+      </button>
+      <span id="adminBadge" class="small" data-admin-only hidden
+            style="margin-left: 8px; color: #d49a08; font-weight: 600">
+        ⚙ admin mode
+      </span>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-top: 16px">
+    <div>
+      <div class="board-wrap">
+        <div class="eval-bar-vert" title="Puzzle eval (white POV)">
+          <div class="eval-fill" id="puzzleEvalFill"></div>
+          <div class="eval-num" id="puzzleEvalNum">–</div>
+        </div>
+        <div id="puzzleBoard"></div>
+      </div>
+      <div id="sessionPills" class="session-pills" title="Riwayat puzzle sesi ini — klik untuk kembali ke puzzle"></div>
+      <div class="card" style="margin-top: 8px">
+        <div class="controls-row">
+          <label class="small">Level
+            <select id="levelFilter" style="margin-left: 4px; padding: 4px">
+              <option value="all">Semua</option>
+              <option value="1">Sangat Mudah</option>
+              <option value="2">Mudah</option>
+              <option value="3">Sedang</option>
+              <option value="4">Sulit</option>
+              <option value="5">Sangat Sulit</option>
+            </select>
+          </label>
+          <label class="small" style="margin-left: 10px">Tema
+            <select id="themeFilter" style="margin-left: 4px; padding: 4px; max-width: 180px">
+              <option value="all">Semua tema</option>
+              <optgroup label="Motif Taktikal">
+                <option value="fork">Fork (Garpu)</option>
+                <option value="pin">Pin (Jarum)</option>
+                <option value="skewer">Skewer (Tusuk Sate)</option>
+                <option value="discovered-attack">Discovered Attack</option>
+                <option value="x-ray">X-Ray</option>
+                <option value="deflection">Deflection</option>
+                <option value="attraction">Attraction (Decoy)</option>
+                <option value="remove-defender">Remove Defender</option>
+                <option value="trapped-piece">Trapped Piece</option>
+              </optgroup>
+              <optgroup label="Pola Skakmat">
+                <option value="mate">Mate (semua)</option>
+                <option value="mate-in-1">Mate-in-1</option>
+                <option value="mate-in-2">Mate-in-2</option>
+                <option value="mate-in-3">Mate-in-3</option>
+                <option value="mate-in-4">Mate-in-4+</option>
+                <option value="back-rank-mate">Back Rank Mate</option>
+                <option value="smothered-mate">Smothered Mate</option>
+                <option value="arabian-mate">Arabian Mate</option>
+                <option value="anastasia-mate">Anastasia Mate</option>
+                <option value="boden-mate">Boden Mate</option>
+                <option value="dovetail-mate">Dovetail Mate</option>
+                <option value="hook-mate">Hook Mate</option>
+              </optgroup>
+              <optgroup label="Karakteristik">
+                <option value="quiet">Quiet (Brilliant)</option>
+                <option value="sacrifice">Sacrifice (Korbanan)</option>
+                <option value="endgame">Endgame</option>
+                <option value="advanced-pawn">Advanced Pawn</option>
+                <option value="check">Check</option>
+                <option value="capture">Capture</option>
+                <option value="promotion">Promotion</option>
+              </optgroup>
+            </select>
+          </label>
+          <span id="puzzleProgress" class="small" style="margin-left: 8px"></span>
+          <button id="puzzleResetBtn" class="secondary" style="margin-left: auto">Reset puzzle</button>
+        </div>
+        <div class="small" id="puzzleHint" style="margin-top: 6px">
+          Drag bidak untuk menjawab puzzle. Coba langkah terbaik untuk sisi yang melangkah.
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h3 id="puzzleTitle">Belum ada puzzle</h3>
+        <div id="puzzleMeta" class="meta"></div>
+        <hr/>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 6px">
+          <b>Solution</b>
+          <div class="controls-row" style="gap: 4px">
+            <button id="puzzleHintBtn" class="secondary" title="Tampilkan bidak yang harus digerakkan">💡 Get Hint</button>
+            <button id="puzzleSolveBtn" class="primary" title="Tampilkan dan mainkan solusi lengkap">Give Solution</button>
+          </div>
+        </div>
+        <div id="puzzleMoves" style="font-family: ui-monospace, Menlo, monospace;
+             font-size: 13px; min-height: 36px; padding: 6px;
+             background: #f6f6f8; border-radius: 4px; word-spacing: 4px;"></div>
+        <hr/>
+        <div><b>FEN</b></div>
+        <div id="puzzleFen" style="font-family: ui-monospace, Menlo, monospace;
+             font-size: 11px; word-break: break-all; color: #555"></div>
+        <hr/>
+        <div id="puzzleCode" style="font-family: ui-monospace, Menlo, monospace;
+             font-size: 11px; color: #888; line-height: 1.6;"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- Puzzle-end modal (content varies: solved-clean vs solved-with-help) -->
+<div id="solvedModal" class="modal-overlay" hidden>
+  <div class="modal-card" id="solvedCard">
+    <h2 id="solvedTitle">Success!</h2>
+    <p id="solvedDetail"></p>
+    <button class="modal-cta" id="modalCtaBtn">CONTINUE TRAINING</button>
+    <div class="modal-actions" id="solvedActions"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+<script src="https://unpkg.com/chess.js@0.10.3/chess.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const PIECE_THEME = "img/chesspieces/{piece}.png";
+
+function setStatus(id, msg, kind) {
+  const el = $(id);
+  el.style.color = kind === 'ok' ? '#22863a' : kind === 'err' ? '#cb2431' : '#666';
+  el.textContent = msg;
+}
+
+// ============================================================
+// Eval bar helpers (cp from white POV)
+// ============================================================
+function cpToPercent(cp) {
+  if (cp === null || cp === undefined) return 50;
+  if (Math.abs(cp) > 9000) return cp > 0 ? 100 : 0;
+  // Logistic map: ±400 cp ≈ 73%/27%, ±1000 ≈ 92%/8%
+  const p = 100 / (1 + Math.exp(-cp / 400));
+  return Math.max(2, Math.min(98, p));
+}
+function cpToLabel(cp) {
+  if (cp === null || cp === undefined) return '–';
+  if (Math.abs(cp) > 9000) return cp > 0 ? 'M+' : 'M-';
+  const v = (cp / 100).toFixed(1);
+  return cp > 0 ? '+' + v : v;
+}
+function setEvalBar(fillId, numId, cp) {
+  const fill = $(fillId), num = $(numId);
+  if (!fill || !num) return;
+  const pct = cpToPercent(cp);
+  fill.style.height = pct + '%';
+  num.textContent = cpToLabel(cp);
+  const bar = fill.parentElement;
+  if (cp !== null && cp !== undefined && cp < -200) bar.classList.add('black-winning');
+  else bar.classList.remove('black-winning');
+}
+
+// Debounced eval fetcher (analyze board) — multi-PV.
+// Skips a previous in-flight request via _evalReqId, plus 200ms debounce
+// so rapid navigation doesn't spam the engine.
+let _evalReqId = 0;
+let _evalTimer = null;
+let multipv = 3;
+let currentLines = [];
+let currentLineFen = null;
+
+// === Stockfish.js Web Worker (replaces server /eval endpoint) ===
+let _sfWorker = null;
+let _sfCurrent = null;     // currently-running job
+let _sfQueue = [];         // pending jobs (only most-recent kept)
+
+function initStockfish() {
+  if (_sfWorker) return;
+  try {
+    _sfWorker = new Worker('stockfish.js');
+  } catch (e) {
+    console.error('Failed to load stockfish.js:', e);
+    return;
+  }
+  _sfWorker.onmessage = (ev) => {
+    const line = String(ev.data || '');
+    if (!_sfCurrent) return;
+    if (line.startsWith('info ') && line.indexOf(' pv ') !== -1) {
+      _parseInfoLine(line);
+    } else if (line.startsWith('bestmove')) {
+      _finalizeCurrent();
+      _runNextSfJob();
+    }
+  };
+  _sfWorker.postMessage('uci');
+  _sfWorker.postMessage('setoption name Threads value 1');
+  _sfWorker.postMessage('ucinewgame');
+}
+
+function _parseInfoLine(line) {
+  const tokens = line.split(/\s+/);
+  let mp = 1, scoreType = null, scoreVal = 0, pvIdx = -1;
+  for (let i = 0; i < tokens.length; i++) {
+    if (tokens[i] === 'multipv') mp = +tokens[i+1];
+    else if (tokens[i] === 'score') { scoreType = tokens[i+1]; scoreVal = +tokens[i+2]; }
+    else if (tokens[i] === 'pv') { pvIdx = i + 1; break; }
+  }
+  if (!scoreType || pvIdx < 0) return;
+  const pvUci = tokens.slice(pvIdx).filter(s => /^[a-h][1-8][a-h][1-8][qrbn]?$/.test(s));
+  if (!pvUci.length) return;
+  // Stockfish reports cp from side-to-move POV; flip for white POV.
+  let cp = scoreType === 'cp'
+    ? scoreVal
+    : (scoreVal > 0 ? (10000 - scoreVal) : (-10000 - scoreVal));
+  if (_sfCurrent.sideToMove === 'b') cp = -cp;
+  _sfCurrent.lines[mp - 1] = { cp, pv_uci: pvUci };
+}
+
+function _finalizeCurrent() {
+  const p = _sfCurrent;
+  _sfCurrent = null;
+  for (const line of p.lines) {
+    if (!line) continue;
+    const tmp = new Chess();
+    tmp.load(p.fen);
+    const san = [];
+    for (const uci of line.pv_uci) {
+      const move = { from: uci.slice(0,2), to: uci.slice(2,4) };
+      if (uci.length === 5) move.promotion = uci[4];
+      let m = null;
+      try { m = tmp.move(move); } catch (e) { break; }
+      if (!m) break;
+      san.push(m.san);
+    }
+    line.pv_san = san;
+  }
+  const filtered = p.lines.filter(l => l);
+  const top = filtered[0];
+  p.resolve({
+    cp: top ? top.cp : 0,
+    lines: filtered,
+    pv_san: top ? top.pv_san : []
+  });
+}
+
+function _runNextSfJob() {
+  if (_sfCurrent || !_sfQueue.length) return;
+  const job = _sfQueue.shift();
+  _sfCurrent = job;
+  _sfWorker.postMessage('setoption name MultiPV value ' + job.multipv);
+  _sfWorker.postMessage('position fen ' + job.fen);
+  _sfWorker.postMessage('go depth ' + job.depth);
+}
+
+function evalWithStockfish(fen, depth, mpv) {
+  initStockfish();
+  if (!_sfWorker) {
+    return Promise.reject(new Error('Stockfish not available'));
+  }
+  return new Promise((resolve) => {
+    const sideToMove = (fen.split(' ')[1] || 'w');
+    const job = { fen, sideToMove, depth, multipv: mpv, lines: [], resolve };
+    // Drop any older queued (not yet running) jobs — we only want the latest.
+    while (_sfQueue.length) _sfQueue.shift().resolve(null);
+    _sfQueue.push(job);
+    if (_sfCurrent) {
+      // Interrupt running job; bestmove handler will pick up the new one.
+      _sfWorker.postMessage('stop');
+    } else {
+      _runNextSfJob();
+    }
+  });
+}
+
+async function fetchEvalForAnalyze(fen, force) {
+  if (!force && !$('autoEval').checked) return;
+  if (_evalTimer) clearTimeout(_evalTimer);
+  // Show "thinking" immediately for UX feedback
+  $('engineLines').innerHTML = '<i style="color:#888">analyzing…</i>';
+  _evalTimer = setTimeout(() => _doFetchEval(fen), force ? 0 : 200);
+}
+
+async function _doFetchEval(fen) {
+  const myId = ++_evalReqId;
+  $('evalNum').textContent = '…';
+  const depth = +$('evalDepth').value || 12;
+  try {
+    const d = await evalWithStockfish(fen, depth, multipv);
+    if (myId !== _evalReqId) return;
+    if (!d) return;  // cancelled
+    setEvalBar('evalFill', 'evalNum', d.cp);
+    currentLines = d.lines || [];
+    currentLineFen = fen;
+    renderEngineLines();
+    if (d.pv_san && d.pv_san.length) {
+      $('evalDisplay').innerHTML =
+        `<b>Best:</b> ${d.pv_san.slice(0, 3).join(' ')}…`;
+    }
+  } catch (e) {
+    if (myId === _evalReqId) {
+      setEvalBar('evalFill', 'evalNum', null);
+      $('engineLines').textContent = 'Error: ' + e.message;
+    }
+  }
+}
+
+function renderEngineLines() {
+  const lines = currentLines;
+  if (!lines.length) {
+    $('engineLines').innerHTML = '<i style="color:#888">—</i>';
+    return;
+  }
+  $('engineLines').innerHTML = lines.map((line, idx) => {
+    const cp = line.cp;
+    const cls = Math.abs(cp) > 9000 || cp > 100 ? 'pos' : cp < -100 ? 'neg' : '';
+    const evalTxt = Math.abs(cp) > 9000 ? (cp > 0 ? '#' : '-#')
+                                        : (cp >= 0 ? '+' : '') + (cp / 100).toFixed(2);
+    const movesHtml = (line.pv_san || []).map((san, i) =>
+      `<span class="line-move" data-line="${idx}" data-step="${i}">${san}</span>`
+    ).join(' ');
+    return `<div class="engine-line">
+      <span class="line-num">${idx + 1}.</span>
+      <span class="line-eval ${cls}">${evalTxt}</span>
+      ${movesHtml}
+    </div>`;
+  }).join('');
+
+  document.querySelectorAll('.line-move').forEach(el => {
+    el.onclick = () => {
+      const li = +el.dataset.line, step = +el.dataset.step;
+      playLineUpTo(li, step);
+    };
+  });
+}
+
+function playLineUpTo(lineIdx, stepInclusive) {
+  const line = currentLines[lineIdx];
+  if (!line || !currentLineFen) return;
+  analyzeChess.load(currentLineFen);
+  for (let i = 0; i <= stepInclusive; i++) {
+    const uci = line.pv_uci[i];
+    if (!uci) break;
+    const move = { from: uci.slice(0, 2), to: uci.slice(2, 4) };
+    if (uci.length === 5) move.promotion = uci[4];
+    try { analyzeChess.move(move); } catch (e) { break; }
+  }
+  analyzeBoard.position(analyzeChess.fen());
+  curPly = -1;
+  highlightCurrentMove();
+  fetchEvalForAnalyze(analyzeChess.fen(), true);
+}
+
+// === Tabs ===
+document.querySelectorAll('.tabs button').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
+    $('tab-' + btn.dataset.tab).classList.remove('hidden');
+    if (btn.dataset.tab === 'library') refreshLibrary();
+    // chessboard.js needs a resize tick after becoming visible
+    setTimeout(() => {
+      if (analyzeBoard) analyzeBoard.resize();
+      if (puzzleBoard) puzzleBoard.resize();
+    }, 50);
+  };
+});
+
+// ============================================================
+// ANALYZE TAB
+// ============================================================
+let games = [];
+let curGame = null;
+let curPly = 0;
+let analyzeBoard = null;
+let analyzeChess = new Chess();   // chess.js engine for legal-move validation
+let curOrient = 'white';
+let evalCache = null;
+
+function onAnalyzeDrop(source, target) {
+  // Try to make the move using chess.js
+  let move;
+  try {
+    move = analyzeChess.move({ from: source, to: target, promotion: 'q' });
+  } catch (e) {
+    move = null;
+  }
+  if (move === null) return 'snapback';
+  // Move was legal — disconnect from PGN navigation, treat as free play
+  curPly = -1;  // signal: no longer aligned to a specific ply
+  highlightCurrentMove();
+  setTimeout(() => {
+    analyzeBoard.position(analyzeChess.fen(), false);
+    fetchEvalForAnalyze(analyzeChess.fen());
+  }, 30);
+}
+
+function onAnalyzeSnapEnd() {
+  // Sync after promotion / drag-end
+  analyzeBoard.position(analyzeChess.fen());
+}
+
+function setupAnalyzeBoard() {
+  if (analyzeBoard) return;
+  analyzeBoard = Chessboard("board", {
+    position: 'start',
+    pieceTheme: PIECE_THEME,
+    draggable: true,
+    onDrop: onAnalyzeDrop,
+    onSnapEnd: onAnalyzeSnapEnd,
+  });
+}
+
+function fenAtPly(ply) {
+  if (!curGame) return null;
+  if (ply === 0) return curGame.start_fen;
+  return curGame.moves[ply - 1].fen_after;
+}
+
+function showPly(ply) {
+  if (!curGame) return;
+  ply = Math.max(0, Math.min(ply, curGame.moves.length));
+  curPly = ply;
+  const fen = fenAtPly(ply);
+  if (analyzeBoard) analyzeBoard.position(fen);
+  analyzeChess.load(fen);
+  highlightCurrentMove();
+  updateEvalDisplay();
+  // Show cached eval immediately if we have one; else fetch
+  if (evalCache && evalCache[ply] !== undefined) {
+    setEvalBar('evalFill', 'evalNum', evalCache[ply].cp);
+  } else {
+    fetchEvalForAnalyze(fen);
+  }
+}
+
+function evalToBar(cp) {
+  if (cp === undefined || cp === null) return '';
+  const big = Math.abs(cp) > 9000;
+  const txt = big ? (cp > 0 ? '#' : '-#') : (cp / 100).toFixed(1);
+  let cls = '';
+  if (big) cls = cp > 0 ? 'bigpos' : 'bigneg';
+  else if (cp > 100) cls = 'pos';
+  else if (cp < -100) cls = 'neg';
+  return `<span class="eval-bar ${cls}">${txt}</span>`;
+}
+
+function highlightCurrentMove() {
+  document.querySelectorAll('#moveList .move').forEach(el => el.classList.remove('current'));
+  if (curPly > 0) {
+    const el = document.querySelector(`#moveList .move[data-ply="${curPly}"]`);
+    if (el) {
+      el.classList.add('current');
+      el.scrollIntoView({ block: 'nearest' });
+    }
+  }
+}
+
+function renderMoveList() {
+  if (!curGame) return;
+  const ml = $('moveList');
+  let html = '';
+  for (let i = 0; i < curGame.moves.length; i++) {
+    if (i % 2 === 0) {
+      html += `<span class="move-num">${(i / 2) + 1}.</span>`;
+    }
+    const evalHtml = (evalCache && evalCache[i + 1] !== undefined)
+      ? ' ' + evalToBar(evalCache[i + 1].cp) : '';
+    html += `<span class="move" data-ply="${i + 1}">${curGame.moves[i].san}</span>${evalHtml} `;
+  }
+  ml.innerHTML = html;
+  ml.querySelectorAll('.move').forEach(el => {
+    el.onclick = () => showPly(+el.dataset.ply);
+  });
+  highlightCurrentMove();
+}
+
+function updateEvalDisplay() {
+  const ev = $('evalDisplay');
+  if (evalCache && evalCache[curPly] !== undefined) {
+    const cp = evalCache[curPly].cp;
+    if (Math.abs(cp) > 9000) {
+      ev.innerHTML = `<b>Eval:</b> ${cp > 0 ? 'White' : 'Black'} forced mate`;
+    } else {
+      ev.innerHTML = `<b>Eval:</b> ${cp > 0 ? '+' : ''}${(cp / 100).toFixed(2)} (white POV)`;
+    }
+  } else {
+    ev.textContent = '';
+  }
+}
+
+$('pgnFile').onchange = async e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  $('pgnInput').value = await f.text();
+};
+
+// === Client-side PGN parser (replaces server /pgn/parse) ===
+// Splits multi-game PGN text and parses each game with chess.js.
+function _splitPgnGames(text) {
+  const out = [];
+  let buf = [];
+  let inMoves = false;
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine;
+    if (line.startsWith('[Event ') && buf.length && inMoves) {
+      out.push(buf.join('\n'));
+      buf = [];
+      inMoves = false;
+    }
+    if (!line.startsWith('[') && line.trim() !== '') inMoves = true;
+    buf.push(line);
+  }
+  if (buf.length) out.push(buf.join('\n'));
+  return out.map(s => s.trim()).filter(s => s.length);
+}
+
+function _parseOnePgnGame(pgnText, idx) {
+  const c = new Chess();
+  let ok = false;
+  try { ok = c.load_pgn(pgnText, { sloppy: true }); } catch (e) { ok = false; }
+  if (!ok) return null;
+  const headers = c.header() || {};
+  const startFen = headers.FEN || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+  const tmp = new Chess();
+  if (headers.FEN) tmp.load(headers.FEN);
+  const history = c.history({ verbose: true });
+  const moves = [];
+  for (const h of history) {
+    const move = { from: h.from, to: h.to };
+    if (h.promotion) move.promotion = h.promotion;
+    const m = tmp.move(move);
+    if (!m) break;
+    moves.push({
+      san: h.san,
+      uci: h.from + h.to + (h.promotion || ''),
+      fen_after: tmp.fen(),
+    });
+  }
+  return { idx, headers, start_fen: startFen, moves };
+}
+
+function parsePgnText(text) {
+  const blocks = _splitPgnGames(text);
+  const out = [];
+  let i = 0;
+  for (const blk of blocks) {
+    const g = _parseOnePgnGame(blk, i);
+    if (g && g.moves.length >= 0) { out.push(g); i++; }
+  }
+  return out;
+}
+
+$('loadBtn').onclick = async () => {
+  const txt = $('pgnInput').value.trim();
+  if (!txt) { setStatus('loadStatus', 'PGN kosong.', 'err'); return; }
+  setStatus('loadStatus', 'Parsing…', '');
+  try {
+    games = parsePgnText(txt);
+    if (games.length === 0) {
+      setStatus('loadStatus', 'Tidak ada game di PGN.', 'err');
+      return;
+    }
+    $('gameInfoCard').hidden = false;
+    setupAnalyzeBoard();
+    const sel = $('gameSelect');
+    sel.innerHTML = games.map((g, i) => {
+      const cleanH = n => (n && n !== '?' && n.trim()) ? n : null;
+      const w = cleanH(g.headers.White), b = cleanH(g.headers.Black);
+      const r = g.headers.Result || '*';
+      const players = (w && b) ? `${w} – ${b}` : (w || b) ? (w || b) : 'Tanpa nama';
+      return `<option value="${i}">${i + 1}. ${players} (${r})</option>`;
+    }).join('');
+    sel.onchange = () => loadGame(+sel.value);
+    loadGame(0);
+    setStatus('loadStatus', `Memuat ${games.length} game.`, 'ok');
+  } catch (e) {
+    setStatus('loadStatus', 'Error: ' + e.message, 'err');
+  }
+};
+
+function loadGame(idx) {
+  curGame = games[idx];
+  curPly = 0;
+  evalCache = null;
+  const h = curGame.headers;
+  $('gameMeta').innerHTML = [
+    h.Event && `<b>Event</b> ${h.Event}`,
+    h.Date && `<b>Date</b> ${h.Date}`,
+    h.Result && `<b>Result</b> ${h.Result}`,
+    `<b>Plies</b> ${curGame.moves.length}`,
+  ].filter(Boolean).join('<br>');
+  renderMoveList();
+  showPly(0);
+}
+
+$('firstBtn').onclick = () => showPly(0);
+$('prevBtn').onclick = () => showPly(Math.max(0, (curPly < 0 ? 0 : curPly - 1)));
+$('resetPosBtn').onclick = () => {
+  // Reset board to a free-play start position (no PGN context required)
+  analyzeChess.reset();
+  if (!analyzeBoard) setupAnalyzeBoard();
+  analyzeBoard.position(analyzeChess.fen());
+  curPly = -1;
+  fetchEvalForAnalyze(analyzeChess.fen());
+};
+
+// Multi-PV controls
+function refreshMultipvDisplay() { $('multipvCount').textContent = multipv; }
+$('multipvMinusBtn').onclick = () => {
+  if (multipv > 1) { multipv--; refreshMultipvDisplay();
+    fetchEvalForAnalyze(analyzeChess.fen(), true); }
+};
+$('multipvPlusBtn').onclick = () => {
+  if (multipv < 8) { multipv++; refreshMultipvDisplay();
+    fetchEvalForAnalyze(analyzeChess.fen(), true); }
+};
+$('reanalyzeBtn').onclick = () => {
+  fetchEvalForAnalyze(analyzeChess.fen(), true);
+};
+$('nextBtn').onclick = () => showPly(curPly + 1);
+$('lastBtn').onclick = () => curGame && showPly(curGame.moves.length);
+$('flipBtn').onclick = () => {
+  curOrient = curOrient === 'white' ? 'black' : 'white';
+  if (analyzeBoard) analyzeBoard.orientation(curOrient);
+};
+
+// Cancellation flag for full-game analysis (set by clicking Analyze again
+// while one is running, or by switching games).
+let _gameAnalyzeAbort = false;
+
+$('analyzeBtn').onclick = async () => {
+  if (!curGame) return;
+  const depth = +$('analyzeDepth').value || 12;
+  const btn = $('analyzeBtn');
+  // If already running, second click cancels.
+  if (btn.dataset.running === '1') {
+    _gameAnalyzeAbort = true;
+    return;
+  }
+  _gameAnalyzeAbort = false;
+  btn.dataset.running = '1';
+  btn.textContent = 'Cancel';
+  const t0 = Date.now();
+  try {
+    const positions = [curGame.start_fen, ...curGame.moves.map(m => m.fen_after)];
+    evalCache = {};
+    for (let ply = 0; ply < positions.length; ply++) {
+      if (_gameAnalyzeAbort) {
+        setStatus('analyzeStatus',
+          `Cancelled at ply ${ply}/${positions.length - 1}.`, '');
+        break;
+      }
+      setStatus('analyzeStatus',
+        `Engine analyzing ply ${ply}/${positions.length - 1} (depth ${depth})…`, '');
+      const d = await evalWithStockfish(positions[ply], depth, 1);
+      if (!d) continue;  // cancelled mid-flight (e.g. by other eval call)
+      evalCache[ply] = { ply, cp: d.cp };
+      // Refresh move list every few plies so user sees progress.
+      if (ply % 3 === 0 || ply === positions.length - 1) {
+        renderMoveList();
+        updateEvalDisplay();
+      }
+    }
+    renderMoveList();
+    updateEvalDisplay();
+    if (!_gameAnalyzeAbort) {
+      setStatus('analyzeStatus',
+        `Done ${positions.length} positions in ${((Date.now() - t0) / 1000).toFixed(1)}s.`,
+        'ok');
+    }
+  } catch (e) {
+    setStatus('analyzeStatus', 'Error: ' + e.message, 'err');
+  } finally {
+    btn.dataset.running = '0';
+    btn.textContent = 'Analyze game';
+    _gameAnalyzeAbort = false;
+  }
+};
+
+$('genFromGameBtn').onclick = async () => {
+  if (!curGame) return;
+  const sel = +$('gameSelect').value;
+  const swing = +$('genSwing').value || 200;
+  const depth = +$('analyzeDepth').value || 12;
+  const btn = $('genFromGameBtn'); btn.disabled = true;
+  setStatus('analyzeStatus', `Cek game untuk puzzle (depth ${depth})…`, '');
+  const t0 = Date.now();
+  try {
+    const q = new URLSearchParams({ depth, swing, max: 0, game_idx: sel });
+    const r = await fetch('/puzzles/generate?' + q.toString(), {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain'},
+      body: $('pgnInput').value,
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      throw new Error(d.error || `HTTP ${r.status}`);
+    }
+    const dt = ((Date.now() - t0) / 1000).toFixed(1);
+    if (d.total > 0) {
+      setStatus('analyzeStatus',
+        `✓ ${d.total} puzzle ditemukan (${d.added} baru ditambahkan ke library) — ${dt}s`,
+        'ok');
+    } else {
+      setStatus('analyzeStatus',
+        `✗ Tidak ada posisi yang lulus filter puzzle di game ini (${dt}s). ` +
+        `Coba dengan game yang punya blunder lebih jelas.`,
+        '');
+    }
+  } catch (e) {
+    setStatus('analyzeStatus', 'Error: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+// ============================================================
+// LIBRARY TAB
+// ============================================================
+let _allLibrary = [];   // raw from server (full library)
+let library = [];        // filtered subset shown to user (by current level filter)
+let curLibIdx = 0;
+let levelFilter = 'all';
+let themeFilter = 'all';
+let puzzleBoard = null;
+let puzzleGame = null;
+let puzzlePlayed = 0;
+let solveTimer = null;
+let solutionRevealed = false;
+let usedHint = false;        // tracks if user clicked "Get Hint" this puzzle
+let usedSolution = false;    // tracks if user clicked "Give Solution" this puzzle
+
+// Session attempts — list of {puzzleId, delta, status, level} for puzzles
+// completed in the CURRENT session. Drives the rating-pill row below the board.
+// Reset on page reload.
+let _sessionAttempts = [];
+
+function recordSessionAttempt(p, status) {
+  // status: 'clean' | 'hinted' | 'solution-shown'
+  // Rating model:
+  //   clean         → +level * 4 × decay (reward, scales DOWN as rating climbs)
+  //   hinted        → −level * 2          (mild penalty)
+  //   solution-shown→ −level * 3          (bigger penalty)
+  //
+  // Diminishing returns: once session total >= level × 30, that level
+  // gives 0. Prevents farming easy puzzles to inflate rating.
+  if (!p || !p.id) return;
+  const lvl = p.level || 3;
+  // Session total so far (sum of all prior deltas)
+  const totalSoFar = _sessionAttempts.reduce((s, a) => s + a.delta, 0);
+
+  let delta;
+  if (status === 'clean') {
+    let base = lvl * 4;
+    if (lvl === 5) base += 2;
+    const cap = lvl * 30;                // L1 cap=30, L2=60, …, L5=150
+    const factor = Math.max(0, Math.min(1, (cap - totalSoFar) / cap));
+    delta = Math.round(base * factor);
+  } else if (status === 'hinted') {
+    delta = -(lvl * 2);                  // penalties stay full — always punish
+  } else {
+    // 'solution-shown'
+    delta = -(lvl * 3);
+  }
+
+  // If puzzle already in session, update existing entry (replay overrides)
+  const existing = _sessionAttempts.find(a => a.puzzleId === p.id);
+  if (existing) {
+    existing.delta = delta;
+    existing.status = status;
+    existing.level = p.level;
+  } else {
+    _sessionAttempts.push({
+      puzzleId: p.id, delta, status, level: p.level,
+    });
+  }
+  renderSessionPills();
+}
+
+// Used by library-v2.js when rated mode submits an attempt to /api/.
+// `delta` is the REAL Glicko-2 rating change from server (float, can be 0).
+// `status`: 'clean' (solved correctly) or 'wrong' (failed first move).
+function recordRatedAttempt(puzzleId, level, delta, status) {
+  if (!puzzleId && puzzleId !== 0) return;
+  const id = 'rated_' + puzzleId;
+  const dInt = Math.round(delta || 0);
+  const existing = _sessionAttempts.find(a => a.puzzleId === id);
+  if (existing) {
+    existing.delta = dInt;
+    existing.status = status;
+    existing.level = level;
+    existing.isRated = true;
+  } else {
+    _sessionAttempts.push({
+      puzzleId: id, delta: dInt, status, level,
+      isRated: true,
+    });
+  }
+  renderSessionPills();
+}
+window.recordRatedAttempt = recordRatedAttempt;
+
+function renderSessionPills() {
+  const container = $('sessionPills');
+  if (!container) return;
+  if (_sessionAttempts.length === 0) {
+    container.innerHTML =
+      '<span class="session-pill pill-current" title="Puzzle saat ini">●</span>';
+    return;
+  }
+  const html = _sessionAttempts.map((a, idx) => {
+    const sign = a.delta > 0 ? '+' : '';   // negatives include their own '-'
+    let cls;
+    if (a.delta < -10)      cls = 'pill-bad';        // big penalty (red)
+    else if (a.delta < 0)   cls = 'pill-minimal';    // mild penalty (orange)
+    else if (a.delta >= 15) cls = 'pill-good';       // big reward (dark green)
+    else                    cls = 'pill-ok';         // small reward (light green)
+    const statusText =
+      a.status === 'clean'  ? 'Solved tanpa bantuan' :
+      a.status === 'wrong'  ? 'Salah (rated)' :
+      a.status === 'hinted' ? 'Pakai Hint (penalti)' :
+                              'Pakai Give Solution (penalti)';
+    const ratedBadge = a.isRated ? ' · 🎲 rated (Glicko-2)' : '';
+    const tooltip = `${statusText}${ratedBadge} · Level ${a.level || '?'} · klik untuk kembali`;
+    // Rated pills show a small dot to distinguish from session-only pills
+    const dot = a.isRated ? '<sup style="font-size:8px">•</sup>' : '';
+    return `<span class="session-pill ${cls}" data-idx="${idx}" title="${tooltip}">${sign}${a.delta}${dot}</span>`;
+  }).join('') +
+  '<span class="session-pill pill-current" title="Puzzle saat ini">●</span>';
+  container.innerHTML = html;
+  container.querySelectorAll('.session-pill[data-idx]').forEach(el => {
+    el.onclick = () => navigateToSessionAttempt(+el.dataset.idx);
+  });
+}
+
+function navigateToSessionAttempt(idx) {
+  const attempt = _sessionAttempts[idx];
+  if (!attempt) return;
+  // Find puzzle in current filtered library; fall back to _allLibrary
+  let libIdx = library.findIndex(p => p.id === attempt.puzzleId);
+  if (libIdx < 0) {
+    libIdx = _allLibrary.findIndex(p => p.id === attempt.puzzleId);
+    if (libIdx >= 0) {
+      $('levelFilter').value = 'all';
+      $('themeFilter').value = 'all';
+      levelFilter = 'all';
+      themeFilter = 'all';
+      library = _allLibrary.slice();
+      curLibIdx = libIdx;
+      updateLibraryStats();
+      loadLibPuzzle();
+      return;
+    }
+  } else {
+    curLibIdx = libIdx;
+    loadLibPuzzle();
+  }
+}
+
+function applyFilters() {
+  // Combined level + theme filter
+  let filtered = _allLibrary;
+  if (levelFilter !== 'all') {
+    const lvl = parseInt(levelFilter);
+    filtered = filtered.filter(p => p.level === lvl);
+  }
+  if (themeFilter !== 'all') {
+    filtered = filtered.filter(p => Array.isArray(p.themes) && p.themes.includes(themeFilter));
+  }
+  library = filtered;
+  // Pick a RANDOM starting puzzle so each filter change feels fresh
+  curLibIdx = library.length > 0
+    ? Math.floor(Math.random() * library.length)
+    : 0;
+  updateLibraryStats();
+  if (library.length > 0) {
+    loadLibPuzzle();
+  } else {
+    if (puzzleBoard) puzzleBoard.position('start');
+    $('puzzleTitle').textContent = 'Tidak ada puzzle untuk filter ini';
+    $('puzzleMeta').innerHTML = 'Coba kombinasi filter lain atau pilih "Semua".';
+    $('puzzleMoves').textContent = '';
+    $('puzzleFen').textContent = '';
+    $('puzzleProgress').textContent = '';
+    if ($('puzzleCode')) $('puzzleCode').textContent = '';
+  }
+}
+
+// Backwards-compat alias (used by refreshLibrary and elsewhere)
+function applyLevelFilter(value) {
+  if (value !== undefined) levelFilter = value;
+  applyFilters();
+}
+
+function updateLibraryStats() {
+  const total = _allLibrary.length;
+  const byLevel = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
+  for (const p of _allLibrary) byLevel[p.level] = (byLevel[p.level] || 0) + 1;
+  const breakdown = [1, 2, 3, 4, 5].map(l => `L${l}:${byLevel[l] || 0}`).join(' ');
+  const filterParts = [];
+  if (levelFilter !== 'all') filterParts.push(`Level ${levelFilter}`);
+  if (themeFilter !== 'all') filterParts.push(`Tema: ${themeFilter}`);
+  const filterLabel = filterParts.length > 0
+    ? ` &nbsp; <span style="color:#06c">Filter: ${filterParts.join(' + ')} (${library.length} puzzle)</span>`
+    : '';
+  $('libStats').innerHTML =
+    `<b>${total}</b> puzzle total &nbsp; <span style="color:#888">${breakdown}</span>${filterLabel}`;
+}
+
+async function refreshLibrary() {
+  try {
+    const r = await fetch('/puzzles/library');
+    _allLibrary = await r.json();
+  } catch (e) {
+    $('libStats').textContent = 'Error fetch library: ' + e.message;
+    console.warn('refreshLibrary fetch failed:', e);
+    return;
+  }
+  // Apply filter separately so a downstream JS error in applyLevelFilter
+  // (e.g. chessboard.js init) doesn't mask the actual library data.
+  try {
+    applyLevelFilter(levelFilter);
+  } catch (e) {
+    $('libStats').innerHTML =
+      `<b>${_allLibrary.length}</b> puzzle dimuat (UI error: ${e.message})`;
+    console.warn('applyLevelFilter failed:', e, e.stack);
+  }
+}
+
+function onPuzzleAttempt(source, target) {
+  // Common path used by both drag and click-to-move
+  if (!library.length) return false;
+  const p = library[curLibIdx];
+  if (puzzlePlayed >= (p.solution_uci || []).length) return false;
+
+  const expectedUci = p.solution_uci[puzzlePlayed];
+  const userUci = source + target;
+  const expectedFromTo = expectedUci.slice(0, 4);
+
+  if (userUci !== expectedFromTo) {
+    flashSquare(target, 'bad');
+    setStatus('puzzleHint', 'Bukan langkah terbaik. Coba lagi.', 'err');
+    return false;
+  }
+
+  // Correct
+  clearHintHighlight();   // user moved → hint no longer needed
+  const move = { from: source, to: target, promotion: expectedUci[4] || 'q' };
+  puzzleGame.move(move);
+  puzzleBoard.position(puzzleGame.fen());
+  puzzlePlayed++;
+  flashSquare(target, 'good');
+  renderPuzzleMoves();
+  // Auto-play opponent's reply
+  setTimeout(() => playOpponentReply(p), 350);
+  return true;
+}
+
+function playOpponentReply(p) {
+  if (puzzlePlayed < p.solution_uci.length) {
+    const oppUci = p.solution_uci[puzzlePlayed];
+    const oppMove = { from: oppUci.slice(0, 2), to: oppUci.slice(2, 4) };
+    if (oppUci.length === 5) oppMove.promotion = oppUci[4];
+    puzzleGame.move(oppMove);
+    puzzleBoard.position(puzzleGame.fen());
+    puzzlePlayed++;
+    renderPuzzleMoves();
+  }
+  if (puzzlePlayed >= p.solution_uci.length) {
+    setStatus('puzzleHint', '🎉 Puzzle terpecahkan!', 'ok');
+    revealPuzzleEval();        // unmask eval after solving
+    // Record session attempt for the rating-pill row
+    const status = usedSolution ? 'solution-shown'
+                : usedHint ? 'hinted'
+                : 'clean';
+    recordSessionAttempt(p, status);
+    showSolvedModal(p);
+  } else {
+    setStatus('puzzleHint', 'Lanjutkan: cari langkah terbaik berikutnya.', '');
+  }
+}
+
+function showSolvedModal(p) {
+  const cheated = usedHint || usedSolution;
+  const isLast = curLibIdx >= library.length - 1;
+  const card = $('solvedCard');
+  const title = $('solvedTitle');
+  const detail = $('solvedDetail');
+  const cta = $('modalCtaBtn');
+  const actions = $('solvedActions');
+
+  const helpReason = [
+    usedHint ? 'Get Hint' : null,
+    usedSolution ? 'Give Solution' : null,
+  ].filter(Boolean).join(' & ');
+
+  if (cheated) {
+    card.classList.add('cheated');
+    title.textContent = '⚠️ Tidak terpecahkan';
+    detail.innerHTML =
+      `Anda menggunakan <b>${helpReason}</b>.<br>` +
+      `Solusi: <b>${(p.solution_san || []).join(' ')}</b>`;
+    // Cheated path: CTA = "Ulangi puzzle" (force user to redo without help)
+    cta.textContent = 'ULANGI PUZZLE';
+    cta.dataset.act = 'retry';
+    cta.disabled = false;
+    actions.innerHTML =
+      `<button data-act="next"${isLast ? ' disabled' : ''}>Lanjut puzzle baru →</button>` +
+      '<button data-act="close">Tutup</button>';
+  } else {
+    card.classList.remove('cheated');
+    title.textContent = 'Success!';
+    detail.innerHTML =
+      `Solusi: <b>${(p.solution_san || []).join(' ')}</b>`;
+    // Clean solve: CTA = "Continue Training" (next puzzle in level)
+    cta.textContent = 'CONTINUE TRAINING';
+    cta.dataset.act = 'next';
+    cta.disabled = isLast;
+    actions.innerHTML =
+      '<button data-act="engine">Cek di engine</button>' +
+      '<button data-act="close">Tutup</button>';
+  }
+
+  cta.onclick = () => handleModalAction(cta.dataset.act);
+  actions.querySelectorAll('button').forEach(btn => {
+    btn.onclick = () => handleModalAction(btn.dataset.act);
+  });
+  $('solvedModal').hidden = false;
+}
+
+function handleModalAction(act) {
+  $('solvedModal').hidden = true;
+  if (act === 'engine') {
+    if (library.length && library[curLibIdx]) {
+      loadFenIntoAnalyze(library[curLibIdx].fen);
+    }
+  } else if (act === 'retry') {
+    loadLibPuzzle();   // reload current puzzle = fresh start (resets usedHint etc)
+  } else if (act === 'next') {
+    if (curLibIdx < library.length - 1) {
+      curLibIdx++;
+      loadLibPuzzle();
+    }
+  }
+  // 'close' = just hide (already done above)
+}
+
+function onPuzzleDrop(source, target) {
+  const ok = onPuzzleAttempt(source, target);
+  return ok ? undefined : 'snapback';
+}
+
+function flashSquare(square, kind) {
+  const el = document.querySelector(`#puzzleBoard .square-${square}`);
+  if (!el) return;
+  const cls = kind === 'good' ? 'square-flash-good' : 'square-flash-bad';
+  el.classList.add(cls);
+  setTimeout(() => el.classList.remove(cls), 600);
+}
+
+function loadLibPuzzle() {
+  if (!library.length) return;
+  if (solveTimer) { clearInterval(solveTimer); solveTimer = null; }
+  const p = library[curLibIdx];
+  renderSessionPills();      // refresh session pills (current pill follows position)
+  if (typeof clearHintHighlight === 'function') clearHintHighlight();
+  puzzleGame = new Chess(p.fen);
+  puzzlePlayed = 0;
+  solutionRevealed = false;  // hide solution by default for each new puzzle
+  usedHint = false;
+  usedSolution = false;
+  $('solvedModal').hidden = true;
+  if ($('puzzleProgress')) {
+    $('puzzleProgress').textContent = `Level ${p.level || '?'}`;
+  }
+  const orient = puzzleGame.turn() === 'w' ? 'white' : 'black';
+  try {
+    if (!puzzleBoard) {
+      const el = document.getElementById('puzzleBoard');
+      if (!el) {
+        console.warn('loadLibPuzzle: #puzzleBoard element missing, skipping board init');
+      } else {
+        puzzleBoard = Chessboard("puzzleBoard", {
+          position: p.fen,
+          orientation: orient,
+          pieceTheme: PIECE_THEME,
+          draggable: true,
+          onDrop: onPuzzleDrop,
+          onSnapEnd: () => puzzleBoard && puzzleBoard.position(puzzleGame.fen()),
+        });
+      }
+    } else {
+      puzzleBoard.orientation(orient);
+      puzzleBoard.position(p.fen);
+    }
+  } catch (boardErr) {
+    console.warn('puzzleBoard init/update failed:', boardErr);
+    // Continue — non-board UI (text, FEN, code) will still render below.
+  }
+  // Eval bar — start CONCEALED so user thinks for themselves who's winning.
+  // Will be revealed when puzzle is solved or solution is revealed.
+  concealPuzzleEval();
+  setStatus('puzzleHint', 'Drag bidak untuk menjawab puzzle.', '');
+  // Hide "?" placeholders when player/event names are unknown
+  const cleanName = n => (n && n !== '?' && n.trim()) ? n : null;
+  const w = cleanName(p.white), b = cleanName(p.black);
+  // Title: only player names, no "Puzzle N/M" prefix
+  const title = (w && b) ? `${w} vs ${b}`
+              : (w || b) ? (w || b)
+              : 'Puzzle';
+  $('puzzleTitle').textContent = title;
+  const themesHtml = (p.themes || []).map(t => `<span class="pill">${t}</span>`).join('') || '—';
+  const event = cleanName(p.event);
+  const metaLines = [
+    `<b>Side</b> ${puzzleGame.turn() === 'w' ? 'White' : 'Black'} to move`,
+    event
+      ? `<b>Source</b> ${event} (ply ${p.ply})`
+      : `<b>Ply</b> ${p.ply}`,
+    `<b>Eval</b> ${p.eval_before_cp} → ${p.eval_after_cp} cp`,
+    `<b>Themes</b> ${themesHtml}`,
+  ];
+  // Cooldown indicator (only set on /api/puzzles/solved or /failed responses)
+  if (p.next_rated_at) {
+    const t = new Date(p.next_rated_at);
+    const now = new Date();
+    const ms = t - now;
+    if (ms > 0) {
+      const days = Math.floor(ms / 86400000);
+      const hours = Math.floor((ms % 86400000) / 3600000);
+      const human = days > 0 ? `${days}h ${hours}j` : `${hours} jam`;
+      metaLines.push(
+        `<b>Cooldown</b> <span style="color:#d49a08">⏱ ${human} lagi</span> ` +
+        `<span style="color:#888;font-size:11px">(unrated practice OK)</span>`
+      );
+    }
+  }
+  $('puzzleMeta').innerHTML = metaLines.join('<br>');
+  renderPuzzleMoves();
+  $('puzzleFen').textContent = p.fen;
+  // Code-style identifier at the bottom (replaces the prominent header counter)
+  if ($('puzzleCode')) {
+    const codeId = (p.id || '').slice(0, 24);
+    $('puzzleCode').innerHTML =
+      `<code>puzzle ${curLibIdx + 1} / ${library.length}</code> · ` +
+      `<code>level ${p.level || '?'}</code> · ` +
+      `<code>${codeId}…</code>`;
+  }
+}
+
+function renderPuzzleMoves() {
+  if (!library.length) return;
+  const p = library[curLibIdx];
+  // Hide solution unless explicitly revealed (or already played out)
+  if (!solutionRevealed && puzzlePlayed === 0) {
+    $('puzzleMoves').innerHTML =
+      '<i style="color:#888">Solusi tersembunyi. Klik <b>Get Hint</b> untuk petunjuk, ' +
+      'atau <b>Give Solution</b> untuk lihat jawaban lengkap.</i>';
+    return;
+  }
+  const html = (p.solution_san || []).map((san, i) => {
+    if (i < puzzlePlayed) return `<span style="color:#888">${san}</span>`;
+    if (i === puzzlePlayed) return `<span style="color:#cb2431;font-weight:bold">${san}</span>`;
+    if (!solutionRevealed) return '<span style="color:#bbb">···</span>';
+    return san;
+  }).join(' ');
+  $('puzzleMoves').innerHTML = html || '—';
+}
+
+// Conceal/reveal the puzzle's eval bar so user thinks for themselves.
+function concealPuzzleEval() {
+  const bar = $('puzzleEvalFill') && $('puzzleEvalFill').parentElement;
+  if (bar) bar.classList.add('eval-concealed');
+  if ($('puzzleEvalNum')) $('puzzleEvalNum').textContent = '•••';
+}
+function revealPuzzleEval() {
+  if (!library.length) return;
+  const p = library[curLibIdx];
+  const turn = puzzleGame ? puzzleGame.turn() : 'w';
+  const cpWhitePov = turn === 'b' ? p.eval_after_cp : -p.eval_after_cp;
+  const bar = $('puzzleEvalFill') && $('puzzleEvalFill').parentElement;
+  if (bar) bar.classList.remove('eval-concealed');
+  setEvalBar('puzzleEvalFill', 'puzzleEvalNum', cpWhitePov);
+}
+
+function showHint() {
+  if (!library.length || !puzzleGame) return;
+  const p = library[curLibIdx];
+  if (puzzlePlayed >= (p.solution_uci || []).length) return;
+  usedHint = true;   // mark as needing help
+  const fromSq = p.solution_uci[puzzlePlayed].slice(0, 2);
+  // Sticky highlight — clears when user moves (via clearHintHighlight) or
+  // loads another puzzle. Use jQuery() directly (the inline `$` is aliased
+  // to document.getElementById, NOT jQuery's selector-string constructor).
+  clearHintHighlight();
+  jQuery(`#puzzleBoard .square-${fromSq}`).css(
+    'box-shadow',
+    'inset 0 0 0 5px rgba(255, 200, 0, 0.95), 0 0 16px rgba(255, 200, 0, 0.5)'
+  );
+  setStatus('puzzleHint', `💡 Hint: gerakkan bidak di kotak ${fromSq.toUpperCase()}`, '');
+}
+
+function clearHintHighlight() {
+  jQuery('#puzzleBoard .square-55d63').css('box-shadow', '');
+}
+
+function revealSolution() {
+  if (!library.length) return;
+  usedSolution = true;   // mark as needing help
+  solutionRevealed = true;
+  revealPuzzleEval();    // also reveal eval bar (no point hiding now)
+  renderPuzzleMoves();
+  setStatus('puzzleHint', 'Solusi ditampilkan. Klik tombol lagi untuk play/pause auto-step.', '');
+  if (solveTimer) { clearInterval(solveTimer); solveTimer = null; return; }
+  solveTimer = setInterval(() => {
+    if (!puzzleStep()) { clearInterval(solveTimer); solveTimer = null; }
+  }, 700);
+}
+
+function puzzleStep() {
+  if (!library.length) return false;
+  const p = library[curLibIdx];
+  if (puzzlePlayed >= (p.solution_uci || []).length) return false;
+  const uci = p.solution_uci[puzzlePlayed];
+  const move = { from: uci.slice(0, 2), to: uci.slice(2, 4) };
+  if (uci.length === 5) move.promotion = uci[4];
+  puzzleGame.move(move);
+  puzzleBoard.position(puzzleGame.fen());
+  puzzlePlayed++;
+  renderPuzzleMoves();
+  if (puzzlePlayed >= p.solution_uci.length) {
+    setStatus('puzzleHint', '🎉 Puzzle terpecahkan!', 'ok');
+    revealPuzzleEval();
+    const status = usedSolution ? 'solution-shown'
+                : usedHint ? 'hinted'
+                : 'clean';
+    recordSessionAttempt(p, status);
+    showSolvedModal(p);
+  }
+  return true;
+}
+
+// ============================================================
+// Admin gating (simplified) — Clear all visible only to localStorage admin.
+// Backend admin via login is added later as a separate layer.
+// To grant: localStorage.setItem('chess_admin', '1'); location.reload();
+// ============================================================
+function isAdmin() {
+  return localStorage.getItem('chess_admin') === '1';
+}
+
+function applyAdminVisibility() {
+  const admin = isAdmin();
+  document.querySelectorAll('[data-admin-only]').forEach(el => {
+    el.hidden = !admin;
+  });
+}
+applyAdminVisibility();
+
+$('refreshLibBtn').onclick = refreshLibrary;
+$('clearLibBtn').onclick = async () => {
+  if (!isAdmin()) {
+    alert('Hanya admin yang dapat menghapus data.');
+    return;
+  }
+  if (!confirm('Hapus SEMUA puzzle di library? Tindakan ini tidak bisa dibatalkan.')) return;
+  await fetch('/puzzles/library/clear', { method: 'POST' });
+  refreshLibrary();
+};
+// No skip-forward via Next button. Session pills (rating deltas) below the
+// board let the user click back to any puzzle attempted this session.
+$('puzzleResetBtn').onclick = loadLibPuzzle;
+$('puzzleHintBtn').onclick = showHint;
+$('levelFilter').onchange = function () {
+  levelFilter = this.value;
+  applyFilters();
+};
+$('themeFilter').onchange = function () {
+  themeFilter = this.value;
+  applyFilters();
+};
+$('puzzleSolveBtn').onclick = revealSolution;
+renderSessionPills();   // initial render (just the blue "current" pill)
+
+// (puzzleBoard is initialized lazily inside loadLibPuzzle when a puzzle
+//  becomes available. No early init — avoids racing with refreshLibrary().)
+
+// ============================================================
+// Solved modal handlers
+// ============================================================
+function loadFenIntoAnalyze(fen) {
+  // Switch to Analyze tab and load the puzzle's FEN as a free-play position.
+  document.querySelector('.tabs button[data-tab="analyze"]').click();
+  curGame = null;
+  curPly = -1;
+  evalCache = null;
+  $('moveList').innerHTML = '';
+  $('gameInfoCard').hidden = true;
+  analyzeChess.load(fen);
+  // Defer board update until after tab transition completes so chessboard.js
+  // has correct dimensions (it was hidden — resize first, then position + eval)
+  setTimeout(() => {
+    if (analyzeBoard) {
+      analyzeBoard.resize();
+      analyzeBoard.position(fen);
+    }
+    fetchEvalForAnalyze(fen, true);   // force=true skips auto-eval checkbox
+  }, 80);
+}
+
+// Click outside modal card closes it
+$('solvedModal').addEventListener('click', (e) => {
+  if (e.target.id === 'solvedModal') $('solvedModal').hidden = true;
+});
+
+// ============================================================
+// Keyboard shortcuts
+// ============================================================
+document.addEventListener('keydown', e => {
+  if (e.target && (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT' ||
+                   e.target.tagName === 'SELECT')) return;
+  const onLibrary = !$('tab-library').classList.contains('hidden');
+  if (onLibrary) {
+    if (e.key === 'h' || e.key === 'H') $('puzzleHintBtn').click();
+    else if (e.key === 'Escape' && !$('solvedModal').hidden) $('solvedModal').hidden = true;
+  } else {
+    if (e.key === 'ArrowLeft') $('prevBtn').click();
+    else if (e.key === 'ArrowRight') $('nextBtn').click();
+    else if (e.key === 'Home') $('firstBtn').click();
+    else if (e.key === 'End') $('lastBtn').click();
+  }
+});
+
+setupAnalyzeBoard();
+fetchEvalForAnalyze(analyzeChess.fen());
+
+// Default tab is now Puzzle Library — load it on first paint
+refreshLibrary();
+
+</script>
+</body>
+</html>

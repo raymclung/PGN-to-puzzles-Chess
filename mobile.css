@@ -1,0 +1,145 @@
+/* ===========================================================
+   Mobile responsiveness — load AFTER the inline styles in index.html
+   so these rules win for narrow viewports.
+   Breakpoint: 768px (tablet/phone landscape)
+   =========================================================== */
+
+@media (max-width: 768px) {
+  /* ---------- Header ---------- */
+  header.appbar {
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 14px;
+  }
+  header.appbar h1 {
+    font-size: 15px;
+  }
+  .tabs button { padding: 6px 12px; font-size: 13px; }
+
+  .user-area {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  /* ---------- Layout ---------- */
+  main { padding: 12px; }
+
+  .grid2 {
+    grid-template-columns: 1fr !important;  /* stack board + side panel */
+    gap: 14px;
+  }
+
+  /* ---------- Board ---------- */
+  #board, #puzzleBoard {
+    width: 100% !important;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  /* Eval bar: thinner on mobile, but still vertical to save horizontal space */
+  .eval-bar-vert {
+    width: 14px !important;
+    height: auto !important;
+    /* Match board height — chessboardjs draws a square so percent works */
+    align-self: stretch;
+  }
+  .eval-bar-vert .eval-num {
+    font-size: 9px;
+  }
+  .board-wrap {
+    align-items: stretch;
+  }
+
+  /* ---------- Cards & inputs ---------- */
+  .card { padding: 10px 12px; }
+  .card h3 { font-size: 13px; }
+
+  /* iOS won't auto-zoom on focus if input is >= 16px */
+  input[type=text], input[type=password], input[type=email],
+  input[type=number], textarea, select {
+    font-size: 16px !important;
+  }
+
+  /* ---------- Controls / buttons ---------- */
+  .controls-row {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  button.primary, button.secondary, .submit-btn {
+    min-height: 40px;             /* touch target — Apple HIG = 44, we use 40 */
+    padding: 8px 14px;
+    font-size: 14px;
+  }
+
+  /* Library subtabs: scrollable horizontally if needed */
+  .lib-subtabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+  .lib-subtabs button {
+    flex-shrink: 0;
+  }
+
+  /* Move list (analyze tab) — limit height on mobile */
+  .move-list {
+    max-height: 160px !important;
+    font-size: 12px;
+  }
+
+  /* Engine analysis lines */
+  .engine-line { font-size: 12px; }
+
+  /* Auth modal — full-width minus margin */
+  .auth-modal {
+    max-width: 100%;
+    padding: 18px 16px;
+  }
+
+  /* FEN box — smaller font on phone */
+  #puzzleFen { font-size: 10px !important; }
+
+  /* Code-style code at bottom: shrink */
+  #puzzleCode { font-size: 10px !important; line-height: 1.4; }
+
+  /* Session pills row — scroll horizontally if too many */
+  .session-pills {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  .session-pill { flex-shrink: 0; }
+
+  /* Solved modal — full-width on phone */
+  .modal-card {
+    width: 92vw !important;
+    max-width: 92vw !important;
+    margin: 0 4vw;
+  }
+  .modal-card h2 { font-size: 22px !important; padding: 20px 16px 6px !important; }
+  .modal-card .modal-cta { font-size: 16px !important; padding: 18px 16px !important; }
+
+  /* Engine panel — buttons in controls-row wrap better on mobile */
+  #enginePanel .controls-row { gap: 4px; }
+  #enginePanel .controls-row input[type=number] { width: 50px; font-size: 13px; }
+
+  /* Hide noisy column when very narrow — eval display next to controls */
+  #evalDisplay { font-size: 11px; }
+
+  /* Puzzle metadata in info card — tighter spacing */
+  .meta b { min-width: 60px !important; font-size: 12px; }
+  .meta { font-size: 12px !important; }
+}
+
+/* Very narrow phones */
+@media (max-width: 380px) {
+  header.appbar h1 { font-size: 13px; }
+  .tabs button { padding: 5px 10px; font-size: 12px; }
+  button.primary, button.secondary { padding: 7px 10px; font-size: 13px; }
+}
+
+/* Touch hover override — prevent sticky :hover on phones */
+@media (hover: none) {
+  button.primary:hover, button.secondary:hover { background: inherit; }
+}

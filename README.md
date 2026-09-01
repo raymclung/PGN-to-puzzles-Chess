@@ -96,6 +96,44 @@ Ada juga dua skrip pembantu. `run_sample.py` mengambil beberapa partai pertama d
 PGN di folder `pgns/` — berguna saat menyetel parameter. `run_full.py` memproses semuanya.
 Keduanya memindai folder itu sendiri, jadi tinggal letakkan berkas PGN di sana.
 
+## Antarmuka web
+
+Selain alat baris perintah, ada papan analisa yang bisa dijalankan lokal:
+
+```bash
+pip install -r requirements.txt
+python server.py 8000
+```
+
+Buka `http://localhost:8000`. Butuh Stockfish di folder `engine/`.
+
+Dua tab. **Analyze** untuk menelaah satu partai: tempel PGN atau unggah berkasnya, telusuri
+langkah demi langkah, dan mesin mengevaluasi tiap posisi dengan bilah evaluasi di samping
+papan. Kedalaman analisis bisa diatur, papan bisa dibalik, dan ada mode evaluasi otomatis.
+
+**Puzzle Library** menampung puzzle yang sudah dibangkitkan, bisa disaring per level dan tema,
+lalu dimainkan langsung di papan.
+
+Endpoint yang dilayani server:
+
+| Endpoint | Kegunaan |
+|---|---|
+| `POST /eval` | Evaluasi satu posisi FEN — mengembalikan skor, langkah terbaik, dan principal variation |
+| `POST /pgn/parse` | Urai PGN menjadi daftar langkah |
+| `POST /game/analyze` | Analisa satu partai utuh |
+| `POST /puzzles/generate` | Bangkitkan puzzle dari PGN yang diunggah |
+| `GET /puzzles/library` | Isi library lokal |
+
+Mesin catur dijalankan sebagai satu proses yang dipakai berulang, dengan cache hasil evaluasi
+supaya penelusuran langkah terasa responsif. Kalau prosesnya mati, server menyalakannya ulang
+sendiri dan mengulang permintaan yang gagal.
+
+Ada juga `embed.js` — widget papan mandiri yang bisa ditempel ke halaman mana pun:
+
+```html
+<div data-chess-game data-pgn="1. e4 e5 2. Nf3 Nc6 ..." data-orientation="white"></div>
+```
+
 ## Keluarannya
 
 ```json
