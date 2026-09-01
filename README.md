@@ -1,82 +1,78 @@
-<div align="center">
+# PGN to Puzzle
 
-# ♟️ PGN → Puzzle
-
-**Alat baris perintah yang mengubah berkas PGN menjadi puzzle taktis catur, memakai Stockfish.**
-
-[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
-[![python-chess](https://img.shields.io/badge/python--chess-1.999-1F4FD9?style=flat-square)](https://python-chess.readthedocs.io/)
-[![Stockfish](https://img.shields.io/badge/Engine-Stockfish-15B79E?style=flat-square)](https://stockfishchess.org/)
-[![CLI](https://img.shields.io/badge/Antarmuka-CLI-6B7280?style=flat-square)](#-penggunaan)
-
-</div>
-
----
-
-## 📖 Cara kerjanya
-
-Puzzle yang bagus lahir dari kesalahan. Alat ini menelusuri setiap posisi dalam sebuah
-partai, lalu mencari momen ketika seorang pemain **mengubah posisi yang seimbang atau
-menang menjadi jelas kalah**.
-
-```
-partai.pgn ──▶ telusuri tiap langkah ──▶ evaluasi dengan Stockfish
-                                              │
-                        ayunan evaluasi ≥ --swing centipawn?
-                                              │ ya
-                                              ▼
-              posisi SETELAH blunder  ──▶  puzzle
-              solusi = principal variation, selama hanya ada satu langkah terbaik
-```
-
-Posisi awal puzzle diambil **setelah** blunder terjadi. Solusinya adalah *principal
-variation* mesin, dimainkan terus selama pihak yang melangkah hanya punya satu langkah
-jelas terbaik — selisih ke langkah terbaik kedua harus melebihi `--swing/2`. Begitu
-muncul dua langkah yang sama baiknya, urutan solusi dihentikan di situ.
-
-## ✨ Yang membedakan
-
-**Deteksi 21 tema taktis**, ditulis sendiri tanpa pustaka luar:
-
-| Kelompok | Tema |
-|---|---|
-| Serangan ganda | `fork`, `double-attack`, `discovered-attack` |
-| Membatasi gerak | `pin`, `skewer`, `x-ray`, `trapped-piece` |
-| Membongkar pertahanan | `remove-defender`, `deflection` |
-| Pola mat bernama | `smothered-mate`, `anastasia-mate`, `arabian-mate`, `boden-mate`, `dovetail-mate`, `hook-mate` |
-| Penanda kualitas | `quiet`, `sacrifice`, `capture`, `check`, `promotion`, `mate-in-1` |
-
-**Tingkat kesulitan 1–5 yang dikalibrasi.** Levelnya ditentukan oleh lanskap evaluasi
-dan penanda kecemerlangan — bukan oleh panjang solusi. Alasannya disengaja: rangkaian
-panjang berisi langkah-langkah gamblang tetap mudah, sementara satu langkah tenang yang
-brilian tetap sulit. Pembagiannya dirancang membentuk kurva lonceng:
-
-| Level | Porsi | Ciri |
-|---|---|---|
-| 1 — sangat mudah | ~10% | mat dalam 1 langkah, taktik gamblang |
-| 2 — mudah | ~25% | |
-| 3 — normal | ~35% | |
-| 4 — sulit | ~20% | |
-| 5 — sangat sulit | ~10% | langkah tenang, pengorbanan, mat panjang |
-
-**Penyaring kualitas.** Blunder yang tidak melahirkan puzzle bagus akan dibuang: posisi
-yang memang sudah kalah telak sebelum blunder, akhir partai yang sepele, dan lanjutan
-yang sudah dipaksa sejak awal.
-
-## 🚀 Penggunaan
-
-```bash
-pip install -r requirements.txt
-```
-
-Unduh Stockfish dari [stockfishchess.org/download](https://stockfishchess.org/download/),
-lalu simpan di `engine/`.
+Alat baris perintah yang membaca berkas PGN, mencari langkah yang mengubah posisi
+seimbang menjadi kalah, lalu menjadikannya puzzle taktis.
 
 ```bash
 python pgn_to_puzzles.py partai.pgn -o puzzles.json
 ```
 
-Contoh yang lebih spesifik — hanya puzzle sulit, maksimal dua per partai:
+## Cara kerjanya
+
+Puzzle yang bagus lahir dari kesalahan. Program ini menelusuri setiap posisi dalam
+sebuah partai dan mengevaluasinya dengan Stockfish, mencari momen ketika seorang pemain
+menjatuhkan posisinya sendiri — ayunan evaluasi melebihi ambang `--swing`.
+
+Posisi awal puzzle diambil **setelah** blunder itu terjadi. Solusinya adalah principal
+variation mesin, dimainkan terus selama pihak yang melangkah hanya punya satu langkah
+jelas terbaik: selisih ke langkah terbaik kedua harus lebih dari `--swing/2`. Begitu
+muncul dua langkah yang sama baiknya, urutan solusi berhenti di situ.
+
+Blunder yang tidak melahirkan puzzle bagus akan dibuang — posisi yang memang sudah kalah
+telak sebelum blunder, akhir partai yang sepele, dan lanjutan yang sudah terpaksa sejak
+awal.
+
+## Soal tingkat kesulitan
+
+Ini bagian yang paling lama saya pikirkan.
+
+Awalnya level ditentukan oleh panjang solusi: makin panjang, makin sulit. Ternyata itu
+keliru. Rangkaian panjang yang isinya langkah-langkah gamblang tetap mudah — pemain
+tinggal mengikuti alurnya. Sebaliknya, satu langkah tenang yang brilian bisa sangat
+sulit meski solusinya cuma satu langkah.
+
+Jadi panjang solusi saya buang sebagai faktor. Yang menentukan sekarang adalah lanskap
+evaluasinya — besar ayunan, seberapa telak posisi setelahnya — ditambah penanda
+kecemerlangan seperti langkah tenang dan pengorbanan. Satu pengecualian struktural:
+mat dalam satu langkah selalu level 1, karena hanya ada satu langkah yang perlu
+ditemukan.
+
+Pembagiannya dirancang membentuk kurva lonceng, supaya puzzle serupa selalu mendarat di
+level yang sama dan pengguna bisa memperkirakan apa yang akan dihadapi:
+
+| Level | Porsi | |
+|---|---|---|
+| 1 | ~10% | mat dalam 1, taktik gamblang |
+| 2 | ~25% | |
+| 3 | ~35% | |
+| 4 | ~20% | |
+| 5 | ~10% | langkah tenang, pengorbanan, mat panjang |
+
+Tema-tema lain — fork, pin, mate-in-2 ke atas — hanya jadi label deskriptif, tidak
+memengaruhi level.
+
+## Tema yang dikenali
+
+Dua puluh satu, semuanya ditulis dari nol tanpa pustaka tambahan:
+
+`fork` `double-attack` `discovered-attack` `pin` `skewer` `x-ray` `trapped-piece`
+`remove-defender` `deflection` `quiet` `sacrifice` `capture` `check` `promotion`
+`mate-in-1`
+
+Ditambah enam pola mat bernama: `smothered-mate` `anastasia-mate` `arabian-mate`
+`boden-mate` `dovetail-mate` `hook-mate`
+
+## Memakainya
+
+```bash
+pip install -r requirements.txt
+```
+
+Unduh Stockfish dari [stockfishchess.org](https://stockfishchess.org/download/), simpan
+di folder `engine/`.
+
+Contoh yang lebih spesifik — hanya puzzle sulit, maksimal dua per partai, analisis lebih
+dalam:
 
 ```bash
 python pgn_to_puzzles.py partai.pgn \
@@ -84,82 +80,42 @@ python pgn_to_puzzles.py partai.pgn \
     -o puzzles-sulit.json
 ```
 
-### Opsi
+Opsi lengkapnya: `-o` `--csv` `--engine` `--depth` `--swing` `--multipv` `--min-ply`
+`--mate-only` `--min-level` `--max-puzzles` `--max-per-game` `--no-quality-filter`
+`--threads` `--hash`
 
-| Opsi | Arti |
-|---|---|
-| `-o`, `--csv` | Keluaran JSON dan/atau CSV |
-| `--engine` | Lokasi biner Stockfish |
-| `--depth` | Kedalaman analisis (makin dalam makin akurat, makin lambat) |
-| `--swing` | Ambang ayunan centipawn yang dianggap blunder |
-| `--multipv` | Jumlah langkah kandidat yang dievaluasi |
-| `--min-ply` | Lewati pembukaan sampai langkah ke-N |
-| `--mate-only` | Hanya ambil puzzle yang berujung mat |
-| `--min-level` | Saring berdasarkan tingkat kesulitan |
-| `--max-puzzles`, `--max-per-game` | Batasi jumlah keluaran |
-| `--no-quality-filter` | Matikan penyaring kualitas |
-| `--threads`, `--hash` | Setelan sumber daya mesin |
+Ada juga dua skrip pembantu. `run_sample.py` mengambil beberapa partai pertama dari tiap
+PGN di folder `pgns/` — berguna saat menyetel parameter. `run_full.py` memproses semuanya.
+Keduanya memindai folder itu sendiri, jadi tinggal letakkan berkas PGN di sana.
 
-### Skrip pembantu
-
-- **`run_sample.py`** — ambil beberapa partai pertama dari tiap PGN di `pgns/`, berguna saat menyetel parameter
-- **`run_full.py`** — proses seluruh berkas PGN di `pgns/`
-
-Keduanya memindai folder `pgns/` secara otomatis, jadi tinggal letakkan berkas PGN di sana.
-
-## 📦 Keluaran
-
-Tiap puzzle tersimpan sebagai satu objek JSON:
+## Keluarannya
 
 ```json
 {
-  "game_id": "partai-001",
   "fen": "r1bq1rk1/pp2bppp/2n1pn2/...",
   "blunder_move": "Nxe5",
   "eval_before_cp": 24,
   "eval_after_cp": -412,
-  "solution_uci": ["d8h4", "g2g3", "h4g3"],
   "solution_san": ["Qh4", "g3", "Qxg3"],
   "themes": ["sacrifice", "discovered-attack", "mate-in-3"],
   "level": 5,
   "opening": "C46 — Three Knights Opening",
-  "time_control": "600+2",
   "source_platform": "lichess"
 }
 ```
 
-Metadata partai ikut terbawa: pemain, event, tanggal, ronde, pembukaan (kode ECO),
-kontrol waktu, nama tim bila ada, dan platform asal yang disimpulkan dari URL situs.
+Metadata partainya ikut terbawa: pemain, event, tanggal, ronde, pembukaan beserta kode
+ECO, kontrol waktu, nama tim bila ada, dan platform asal yang disimpulkan dari URL situs.
 
-## 🛠️ Teknologi
+Analisisnya berjalan streaming, jadi berkas PGN besar tidak perlu dimuat seluruhnya ke
+memori.
 
-| Aspek | Pilihan |
-|---|---|
-| **Bahasa** | Python 3.10+ |
-| **Dependensi** | `python-chess` — hanya satu |
-| **Mesin catur** | Stockfish, lewat protokol UCI |
-| **Antarmuka** | CLI dengan `argparse` |
-| **Keluaran** | JSON dan CSV |
+## Kontribusi
 
-Analisis berjalan dalam mode *streaming*, sehingga berkas PGN besar tidak perlu dimuat
-seluruhnya ke memori.
+Alat ini saya kembangkan atas penugasan dan arahan arsitek proyek tempat saya
+mengerjakannya. Berkas PGN pertandingan, platform web, dan seluruh komponen yang khusus
+milik penyelenggara turnamen sengaja tidak disertakan di sini.
 
-## 🤝 Kontribusi
+## Lisensi
 
-Bagian terbesar alat ini saya tulis sendiri — logika deteksi blunder, deteksi tema
-taktis, dan penentuan tingkat kesulitan. Pengembangannya berlangsung dalam sebuah
-proyek bersama, dengan arahan dan tinjauan dari rekan sekaligus arsitek proyek
-tersebut.
-
-Berkas PGN pertandingan, platform web, serta seluruh komponen yang khusus milik
-penyelenggara turnamen sengaja **tidak** disertakan di repositori ini.
-
-## 📄 Lisensi
-
-Dirilis di bawah [Lisensi MIT](LICENSE).
-
----
-
-<div align="center">
-<sub>Dibuat oleh <a href="https://github.com/raymclung">@raymclung</a></sub>
-</div>
+[MIT](LICENSE)
