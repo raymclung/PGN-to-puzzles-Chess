@@ -1,0 +1,23 @@
+# Binari engine — unduh dari https://stockfishchess.org/download/
+engine/
+*.exe
+
+# Berkas PGN masukan dan hasil keluaran (data, bukan kode)
+pgns/
+_sample/
+*.json
+!package.json
+*.csv
+*.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Editor & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
