@@ -107,6 +107,8 @@ python server.py 8000
 
 Buka `http://localhost:8000`. Butuh Stockfish di folder `engine/`.
 
+![Papan analisa](docs/analyzer.jpg)
+
 Dua tab. **Analyze** untuk menelaah satu partai: tempel PGN atau unggah berkasnya, telusuri
 langkah demi langkah, dan mesin mengevaluasi tiap posisi dengan bilah evaluasi di samping
 papan. Kedalaman analisis bisa diatur, papan bisa dibalik, dan ada mode evaluasi otomatis.
